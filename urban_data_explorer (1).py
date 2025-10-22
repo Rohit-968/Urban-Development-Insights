@@ -1,78 +1,87 @@
-import pandas as pd
+# urban_data_explorer_demo.py
 import streamlit as st
+import pandas as pd
 
+# -----------------------------
+# Function to load a sample of each dataset
+# -----------------------------
 @st.cache_data
-def load_data():
-    data_files = {
-        "landcover": "https://huggingface.co/datasets/Rxyz21/UrbanInsight/resolve/main/LandCoverData.xls",
-        "population": "https://huggingface.co/datasets/Rxyz21/UrbanInsight/resolve/main/PopulationDensityData.xls",
-        "realestate": "https://huggingface.co/datasets/Rxyz21/UrbanInsight/resolve/main/RealEstateData.xls",
-        "transport": "https://huggingface.co/datasets/Rxyz21/UrbanInsight/resolve/main/TransportData.xls"
-    }
-
+def load_sample_data():
     try:
-        landcover = pd.read_excel(data_files["landcover"])
-        population = pd.read_excel(data_files["population"])
-        realestate = pd.read_excel(data_files["realestate"])
-        transport = pd.read_excel(data_files["transport"])
-        # Merge or process as needed
-        merged_df = landcover.merge(population, on='city', how='outer') \
-                             .merge(realestate, on='city', how='outer') \
-                             .merge(transport, on='city', how='outer')
+        landcover = pd.read_excel(
+            "LandCoverData.xls", nrows=2000
+        )
+        population = pd.read_excel(
+            "PopulationDensityData.xls", nrows=2000
+        )
+        realestate = pd.read_excel(
+            "RealEstateData.xls", nrows=2000
+        )
+        transport = pd.read_excel(
+            "TransportData.xls", nrows=2000
+        )
+
+        # Merge datasets on a common column, e.g., 'city'
+        merged_df = (
+            landcover.merge(population, on="city", how="outer")
+            .merge(realestate, on="city", how="outer")
+            .merge(transport, on="city", how="outer")
+        )
+
         return merged_df
+    except FileNotFoundError as e:
+        st.error(f"Dataset file not found: {e}")
+        return pd.DataFrame()  # empty dataframe
     except Exception as e:
         st.error(f"Error loading data: {e}")
-        return pd.DataFrame()  # empty dataframe to prevent crashes
+        return pd.DataFrame()
 
-data = load_data()
-
-if data.empty:
-    st.stop()  # Stop the app if datasets cannot be loaded
-
-
-data = load_data()
-
-if data.empty:
-    st.stop()  # Stop the app if data isn't loaded
 
 # -----------------------------
 # Streamlit App
 # -----------------------------
-st.title("Urban Data Explorer")
-st.subheader("Merged Urban Dataset")
-st.dataframe(data)
+st.title("Urban Data Explorer (Demo Version)")
 
-# -----------------------------
-# Filter options
-# -----------------------------
-st.subheader("Filter Data")
-merge_keys = [col for col in data.columns if col.lower() in ['city', 'region', 'area', 'district', 'id']]
-selected_key = st.selectbox("Select a column to filter by:", merge_keys)
+data = load_sample_data()
 
-if selected_key:
-    unique_values = data[selected_key].dropna().unique()
-    selected_values = st.multiselect(f"Select {selected_key}:", unique_values)
-    filtered_data = data[data[selected_key].isin(selected_values)] if selected_values else data
+if data.empty:
+    st.stop()  # Stop the app if datasets are missing
+
+# Show first few rows
+st.subheader("Preview of Dataset (first 10 rows)")
+st.write(data.head(10))
+
+# Filters
+st.subheader("Filter by City")
+if "city" in data.columns:
+    selected_cities = st.multiselect(
+        "Select cities:", data["city"].unique()
+    )
+    if selected_cities:
+        filtered_data = data[data["city"].isin(selected_cities)]
+    else:
+        filtered_data = data
 else:
     filtered_data = data
 
-st.write(f"Showing {len(filtered_data)} rows after filtering.")
-st.dataframe(filtered_data)
+# Show filtered data
+st.subheader("Filtered Data Preview")
+st.write(filtered_data.head(10))
 
-# -----------------------------
 # Summary stats
-# -----------------------------
-st.subheader("Summary Statistics")
-st.write(filtered_data.describe(include='number'))  # numeric only to save memory
+st.subheader("Summary Statistics (numeric only)")
+if not filtered_data.empty:
+    st.write(filtered_data.select_dtypes("number").describe())
+else:
+    st.write("No numeric data available.")
 
-# -----------------------------
 # Download filtered data
-# -----------------------------
 st.subheader("Download Filtered Data")
-csv = filtered_data.to_csv(index=False)
-st.download_button(
-    label="Download CSV",
-    data=csv,
-    file_name="filtered_urban_data.csv",
-    mime="text/csv"
-)
+if not filtered_data.empty:
+    csv = filtered_data.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download CSV",
+        data=csv,
+        file_name="filtered_urban_data_demo.csv",
+        mime="text/csv",
+    )
