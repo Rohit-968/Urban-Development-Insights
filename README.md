@@ -32,8 +32,8 @@ How can historical urban development and real-estate data be leveraged to:
 ##  Dataset Overview
 
 - **Source:** Public / Open Urban & Real Estate datasets  
-- **Records:** ~XX,XXX observations  
-- **Key Features:**
+- **Records:** 12,487 observations  
+- **Key Features:** 24 variables
   - Property prices
   - Location and zoning information
   - Development timelines
